@@ -138,13 +138,13 @@ pub fn decode_instruction(bytes: &[u8]) -> Instruction {
 
             let mem = if w == 0 {
                 Operand::Memory(MemoryOperand {
-                    kind: MemoryOperandKind::Direct(MemoryDirect::DirectAddress(addr_lo as _)),
+                    kind: MemoryOperandKind::Direct_Address(addr_lo as _),
                     size: MemoryOperandSize::Byte,
                 })
             } else {
                 let addr = ((addr_hi as u16) << 8) + addr_lo as u16;
                 Operand::Memory(MemoryOperand {
-                    kind: MemoryOperandKind::Direct(MemoryDirect::DirectAddress(addr)),
+                    kind: MemoryOperandKind::Direct_Address(addr),
                     size: MemoryOperandSize::Word,
                 })
             };
@@ -165,13 +165,13 @@ pub fn decode_instruction(bytes: &[u8]) -> Instruction {
 
             let mem = if w == 0 {
                 Operand::Memory(MemoryOperand {
-                    kind: MemoryOperandKind::Direct(MemoryDirect::DirectAddress(addr_lo as _)),
+                    kind: MemoryOperandKind::Direct_Address(addr_lo as _),
                     size: MemoryOperandSize::Byte,
                 })
             } else {
                 let addr = ((addr_hi as u16) << 8) + addr_lo as u16;
                 Operand::Memory(MemoryOperand {
-                    kind: MemoryOperandKind::Direct(MemoryDirect::DirectAddress(addr)),
+                    kind: MemoryOperandKind::Direct_Address(addr),
                     size: MemoryOperandSize::Word,
                 })
             };
@@ -710,20 +710,20 @@ fn decode_address(encoding: u8, w: u8, displacement_bytes: &[u8]) -> (Operand, u
     let mut bytes_read = 0;
     let operand_size = MemoryOperandSize::from_w_bit(w);
     let operand_kind = match encoding {
-        0b000 => MemoryOperandKind::Direct(MemoryDirect::BX_SI),
-        0b001 => MemoryOperandKind::Direct(MemoryDirect::BX_DI),
-        0b010 => MemoryOperandKind::Direct(MemoryDirect::BP_SI),
-        0b011 => MemoryOperandKind::Direct(MemoryDirect::BP_DI),
-        0b100 => MemoryOperandKind::Direct(MemoryDirect::SI),
-        0b101 => MemoryOperandKind::Direct(MemoryDirect::DI),
+        0b000 => MemoryOperandKind::Direct_BX_SI,
+        0b001 => MemoryOperandKind::Direct_BX_DI,
+        0b010 => MemoryOperandKind::Direct_BP_SI,
+        0b011 => MemoryOperandKind::Direct_BP_DI,
+        0b100 => MemoryOperandKind::Direct_SI,
+        0b101 => MemoryOperandKind::Direct_DI,
         0b110 => {
             let disp0 = displacement_bytes[0];
             let disp1 = displacement_bytes[1];
             let disp: u16 = ((disp1 as u16) << 8) + disp0 as u16;
             bytes_read = 2;
-            MemoryOperandKind::Direct(MemoryDirect::DirectAddress(disp))
+            MemoryOperandKind::Direct_Address(disp)
         }
-        0b111 => MemoryOperandKind::Direct(MemoryDirect::BX),
+        0b111 => MemoryOperandKind::Direct_BX,
         _ => unreachable!(),
     };
     let operand = Operand::Memory(MemoryOperand {
@@ -736,14 +736,14 @@ fn decode_address(encoding: u8, w: u8, displacement_bytes: &[u8]) -> (Operand, u
 fn decode_address_disp8(encoding: u8, w: u8, disp: i8) -> Operand {
     let operand_size = MemoryOperandSize::from_w_bit(w);
     let operand_kind = match encoding {
-        0b000 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX_SI(disp)),
-        0b001 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX_DI(disp)),
-        0b010 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP_SI(disp)),
-        0b011 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP_DI(disp)),
-        0b100 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::SI(disp)),
-        0b101 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::DI(disp)),
-        0b110 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP(disp)),
-        0b111 => MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX(disp)),
+        0b000 => MemoryOperandKind::Disp8_BX_SI(disp),
+        0b001 => MemoryOperandKind::Disp8_BX_DI(disp),
+        0b010 => MemoryOperandKind::Disp8_BP_SI(disp),
+        0b011 => MemoryOperandKind::Disp8_BP_DI(disp),
+        0b100 => MemoryOperandKind::Disp8_SI(disp),
+        0b101 => MemoryOperandKind::Disp8_DI(disp),
+        0b110 => MemoryOperandKind::Disp8_BP(disp),
+        0b111 => MemoryOperandKind::Disp8_BX(disp),
         _ => unreachable!(),
     };
     let operand = Operand::Memory(MemoryOperand {
@@ -756,14 +756,14 @@ fn decode_address_disp8(encoding: u8, w: u8, disp: i8) -> Operand {
 fn decode_address_disp16(encoding: u8, w: u8, disp: i16) -> Operand {
     let operand_size = MemoryOperandSize::from_w_bit(w);
     let operand_kind = match encoding {
-        0b000 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX_SI(disp)),
-        0b001 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX_DI(disp)),
-        0b010 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP_SI(disp)),
-        0b011 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP_DI(disp)),
-        0b100 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::SI(disp)),
-        0b101 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::DI(disp)),
-        0b110 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP(disp)),
-        0b111 => MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX(disp)),
+        0b000 => MemoryOperandKind::Disp16_BX_SI(disp),
+        0b001 => MemoryOperandKind::Disp16_BX_DI(disp),
+        0b010 => MemoryOperandKind::Disp16_BP_SI(disp),
+        0b011 => MemoryOperandKind::Disp16_BP_DI(disp),
+        0b100 => MemoryOperandKind::Disp16_SI(disp),
+        0b101 => MemoryOperandKind::Disp16_DI(disp),
+        0b110 => MemoryOperandKind::Disp16_BP(disp),
+        0b111 => MemoryOperandKind::Disp16_BX(disp),
         _ => unreachable!(),
     };
     let operand = Operand::Memory(MemoryOperand {
@@ -771,4 +771,86 @@ fn decode_address_disp16(encoding: u8, w: u8, disp: i16) -> Operand {
         size: operand_size,
     });
     operand
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn register_to_register() {
+        let bytes = &mut [0x89, 0xd9, 0, 0, 0, 0];
+        let instruction = decode_instruction(bytes);
+
+        let answer = Instruction {
+            op: Op::Mov,
+            operands: [
+                Some(Operand::Register(Register::CX)),
+                Some(Operand::Register(Register::BX)),
+            ],
+            length: 2,
+        };
+        assert_eq!(instruction, answer);
+        assert_eq!(instruction.to_string(), "mov cx, bx");
+    }
+
+    #[test]
+    fn register_to_memory_direct() {
+        let bytes = &mut [0xa1, 0x21, 0x00, 0, 0, 0];
+        let instruction = decode_instruction(bytes);
+
+        let answer = Instruction {
+            op: Op::Mov,
+            operands: [
+                Some(Operand::Register(Register::AX)),
+                Some(Operand::Memory(MemoryOperand {
+                    kind: MemoryOperandKind::Direct_Address(33),
+                    size: MemoryOperandSize::Word,
+                })),
+            ],
+            length: 3,
+        };
+
+        assert_eq!(instruction, answer);
+        assert_eq!(instruction.to_string(), "mov ax, word [33]");
+    }
+
+    #[test]
+    fn register_to_memory_disp8() {
+        let bytes = &mut [0x8b, 0x5c, 0x21, 0, 0, 0];
+        let instruction = decode_instruction(bytes);
+
+        let answer = Instruction {
+            op: Op::Mov,
+            operands: [
+                Some(Operand::Register(Register::BX)),
+                Some(Operand::Memory(MemoryOperand {
+                    kind: MemoryOperandKind::Disp8_SI(33),
+                    size: MemoryOperandSize::Word,
+                })),
+            ],
+            length: 3,
+        };
+        assert_eq!(instruction, answer);
+        assert_eq!(instruction.to_string(), "mov bx, word [si +33]");
+    }
+
+    #[test]
+    fn register_to_memory_disp16() {
+        let bytes = &mut [0x8b, 0x94, 0xd0, 0x07, 0, 0];
+        let instruction = decode_instruction(bytes);
+
+        let answer = Instruction {
+            op: Op::Mov,
+            operands: [
+                Some(Operand::Register(Register::DX)),
+                Some(Operand::Memory(MemoryOperand {
+                    kind: MemoryOperandKind::Disp16_SI(2000),
+                    size: MemoryOperandSize::Word,
+                })),
+            ],
+            length: 4,
+        };
+        assert_eq!(instruction, answer);
+        assert_eq!(instruction.to_string(), "mov dx, word [si +2000]");
+    }
 }

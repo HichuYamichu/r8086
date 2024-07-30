@@ -1,6 +1,6 @@
 use crate::*;
 
-pub fn simulate(registers: &mut RegisterFile, memory: &mut Memory, instruction: Instruction) {
+pub fn simulate(registers: &mut RegisterFile, memory: &mut [u8], instruction: Instruction) {
     registers.ip += instruction.length as u16;
 
     match instruction.op {
@@ -22,7 +22,7 @@ pub fn simulate(registers: &mut RegisterFile, memory: &mut Memory, instruction: 
                         }
                         Operand::Memory(memory_operand) => {
                             let addr = get_address_from_operand(registers, memory_operand);
-                            let dest_memory = &mut memory.memory[addr..addr + size as usize];
+                            let dest_memory = &mut memory[addr..addr + size as usize];
                             dest_memory.copy_from_slice(src_slice);
                         }
                         Operand::Immediate(_) => unreachable!(),
@@ -41,7 +41,7 @@ pub fn simulate(registers: &mut RegisterFile, memory: &mut Memory, instruction: 
                         }
                         Operand::Memory(memory_operand) => {
                             let addr = get_address_from_operand(registers, memory_operand);
-                            let dest_memory = &mut memory.memory[addr..addr + size as usize];
+                            let dest_memory = &mut memory[addr..addr + size as usize];
                             dest_memory.copy_from_slice(src_slice);
                         }
                         Operand::Immediate(_) => unreachable!(),
@@ -53,7 +53,7 @@ pub fn simulate(registers: &mut RegisterFile, memory: &mut Memory, instruction: 
                     match dest {
                         Operand::Register(reg) => {
                             let dest = get_register_as_slice(registers, reg);
-                            let src_memory = &mut memory.memory[addr..addr + dest.len()];
+                            let src_memory = &mut memory[addr..addr + dest.len()];
                             dest.copy_from_slice(src_memory);
                         }
                         Operand::Memory(_) => unreachable!(),
@@ -337,64 +337,48 @@ fn get_register_value(registers: &mut RegisterFile, reg: Register) -> (u16, u8, 
 
 fn get_address_from_operand(register_file: &RegisterFile, memory_operand: MemoryOperand) -> usize {
     let addr = match memory_operand.kind {
-        MemoryOperandKind::Direct(MemoryDirect::BX_SI) => register_file.bx + register_file.si,
-        MemoryOperandKind::Direct(MemoryDirect::BX_DI) => register_file.bx + register_file.di,
-        MemoryOperandKind::Direct(MemoryDirect::BP_SI) => register_file.bp + register_file.si,
-        MemoryOperandKind::Direct(MemoryDirect::BP_DI) => register_file.bp + register_file.di,
-        MemoryOperandKind::Direct(MemoryDirect::SI) => register_file.si,
-        MemoryOperandKind::Direct(MemoryDirect::DI) => register_file.di,
-        MemoryOperandKind::Direct(MemoryDirect::DirectAddress(addr)) => addr,
-        MemoryOperandKind::Direct(MemoryDirect::BX) => register_file.bx,
+        MemoryOperandKind::Direct_BX_SI => register_file.bx + register_file.si,
+        MemoryOperandKind::Direct_BX_DI => register_file.bx + register_file.di,
+        MemoryOperandKind::Direct_BP_SI => register_file.bp + register_file.si,
+        MemoryOperandKind::Direct_BP_DI => register_file.bp + register_file.di,
+        MemoryOperandKind::Direct_SI => register_file.si,
+        MemoryOperandKind::Direct_DI => register_file.di,
+        MemoryOperandKind::Direct_Address(addr) => addr,
+        MemoryOperandKind::Direct_BX => register_file.bx,
 
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX_SI(disp)) => {
+        MemoryOperandKind::Disp8_BX_SI(disp) => {
             ((register_file.bx + register_file.si) as i16 + disp as i16) as u16
         }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX_DI(disp)) => {
+        MemoryOperandKind::Disp8_BX_DI(disp) => {
             ((register_file.bx + register_file.di) as i16 + disp as i16) as u16
         }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP_SI(disp)) => {
+        MemoryOperandKind::Disp8_BP_SI(disp) => {
             ((register_file.bp + register_file.si) as i16 + disp as i16) as u16
         }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP_DI(disp)) => {
+        MemoryOperandKind::Disp8_BP_DI(disp) => {
             ((register_file.bp + register_file.di) as i16 + disp as i16) as u16
         }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::SI(disp)) => {
-            (register_file.si as i16 + disp as i16) as u16
-        }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::DI(disp)) => {
-            (register_file.di as i16 + disp as i16) as u16
-        }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP(disp)) => {
-            (register_file.bp as i16 + disp as i16) as u16
-        }
-        MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX(disp)) => {
-            (register_file.bx as i16 + disp as i16) as u16
-        }
+        MemoryOperandKind::Disp8_SI(disp) => (register_file.si as i16 + disp as i16) as u16,
+        MemoryOperandKind::Disp8_DI(disp) => (register_file.di as i16 + disp as i16) as u16,
+        MemoryOperandKind::Disp8_BP(disp) => (register_file.bp as i16 + disp as i16) as u16,
+        MemoryOperandKind::Disp8_BX(disp) => (register_file.bx as i16 + disp as i16) as u16,
 
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX_SI(disp)) => {
+        MemoryOperandKind::Disp16_BX_SI(disp) => {
             ((register_file.bx + register_file.si) as i16 + disp) as u16
         }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX_DI(disp)) => {
+        MemoryOperandKind::Disp16_BX_DI(disp) => {
             ((register_file.bx + register_file.di) as i16 + disp) as u16
         }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP_SI(disp)) => {
+        MemoryOperandKind::Disp16_BP_SI(disp) => {
             ((register_file.bp + register_file.si) as i16 + disp) as u16
         }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP_DI(disp)) => {
+        MemoryOperandKind::Disp16_BP_DI(disp) => {
             ((register_file.bp + register_file.di) as i16 + disp) as u16
         }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::SI(disp)) => {
-            (register_file.si as i16 + disp) as u16
-        }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::DI(disp)) => {
-            (register_file.di as i16 + disp) as u16
-        }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP(disp)) => {
-            (register_file.bp as i16 + disp) as u16
-        }
-        MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX(disp)) => {
-            (register_file.bx as i16 + disp) as u16
-        }
+        MemoryOperandKind::Disp16_SI(disp) => (register_file.si as i16 + disp) as u16,
+        MemoryOperandKind::Disp16_DI(disp) => (register_file.di as i16 + disp) as u16,
+        MemoryOperandKind::Disp16_BP(disp) => (register_file.bp as i16 + disp) as u16,
+        MemoryOperandKind::Disp16_BX(disp) => (register_file.bx as i16 + disp) as u16,
     } as usize;
 
     addr

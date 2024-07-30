@@ -27,18 +27,7 @@ impl RegisterFile {
     const SF_MASK: u16 = 1 << 4;
 }
 
-#[derive(Debug)]
-pub struct Memory {
-    pub memory: Vec<u8>
-}
-
-impl Default for Memory {
-    fn default() -> Self {
-        Self { memory: vec![0; 1024 * 1024] }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Instruction {
     pub op: Op,
     pub length: u8,
@@ -86,7 +75,7 @@ impl Display for Instruction {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Op {
     Mov,
     Add,
@@ -114,7 +103,7 @@ pub enum Op {
     Jcxz,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Operand {
     Register(Register),
     Memory(MemoryOperand),
@@ -144,74 +133,48 @@ impl Display for Operand {
                 Register::DI => write!(f, "di")?,
             },
             Operand::Memory(mem) => match mem.kind {
-                MemoryOperandKind::Direct(MemoryDirect::BX_SI) => {
-                    write!(f, "{} [bx + si]", mem.size)?
-                }
-                MemoryOperandKind::Direct(MemoryDirect::BX_DI) => {
-                    write!(f, "{} [bx + di]", mem.size)?
-                }
-                MemoryOperandKind::Direct(MemoryDirect::BP_SI) => {
-                    write!(f, "{} [bp + si]", mem.size)?
-                }
-                MemoryOperandKind::Direct(MemoryDirect::BP_DI) => {
-                    write!(f, "{} [bp + di]", mem.size)?
-                }
-                MemoryOperandKind::Direct(MemoryDirect::SI) => write!(f, "{} [si]", mem.size)?,
-                MemoryOperandKind::Direct(MemoryDirect::DI) => write!(f, "{} [di]", mem.size)?,
-                MemoryOperandKind::Direct(MemoryDirect::DirectAddress(value)) => {
-                    write!(f, "{} [{value}]", mem.size)?
-                }
-                MemoryOperandKind::Direct(MemoryDirect::BX) => write!(f, "{} [bx]", mem.size)?,
+                MemoryOperandKind::Direct_BX_SI => write!(f, "{} [bx + si]", mem.size)?,
+                MemoryOperandKind::Direct_BX_DI => write!(f, "{} [bx + di]", mem.size)?,
+                MemoryOperandKind::Direct_BP_SI => write!(f, "{} [bp + si]", mem.size)?,
+                MemoryOperandKind::Direct_BP_DI => write!(f, "{} [bp + di]", mem.size)?,
+                MemoryOperandKind::Direct_SI => write!(f, "{} [si]", mem.size)?,
+                MemoryOperandKind::Direct_DI => write!(f, "{} [di]", mem.size)?,
+                MemoryOperandKind::Direct_Address(value) => write!(f, "{} [{value}]", mem.size)?,
+                MemoryOperandKind::Direct_BX => write!(f, "{} [bx]", mem.size)?,
 
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX_SI(disp)) => {
+                MemoryOperandKind::Disp8_BX_SI(disp) => {
                     write!(f, "{} [bx + si {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX_DI(disp)) => {
+                MemoryOperandKind::Disp8_BX_DI(disp) => {
                     write!(f, "{} [bx + di {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP_SI(disp)) => {
+                MemoryOperandKind::Disp8_BP_SI(disp) => {
                     write!(f, "{} [bp + si {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP_DI(disp)) => {
+                MemoryOperandKind::Disp8_BP_DI(disp) => {
                     write!(f, "{} [bp + di {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::SI(disp)) => {
-                    write!(f, "{} [si {:+}]", mem.size, disp)?
-                }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::DI(disp)) => {
-                    write!(f, "{} [di {:+}]", mem.size, disp)?
-                }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BP(disp)) => {
-                    write!(f, "{} [bp {:+}]", mem.size, disp)?
-                }
-                MemoryOperandKind::Displacement8bit(MemoryDisplacement8bit::BX(disp)) => {
-                    write!(f, "{} [bx {:+}]", mem.size, disp)?
-                }
+                MemoryOperandKind::Disp8_SI(disp) => write!(f, "{} [si {:+}]", mem.size, disp)?,
+                MemoryOperandKind::Disp8_DI(disp) => write!(f, "{} [di {:+}]", mem.size, disp)?,
+                MemoryOperandKind::Disp8_BP(disp) => write!(f, "{} [bp {:+}]", mem.size, disp)?,
+                MemoryOperandKind::Disp8_BX(disp) => write!(f, "{} [bx {:+}]", mem.size, disp)?,
 
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX_SI(disp)) => {
+                MemoryOperandKind::Disp16_BX_SI(disp) => {
                     write!(f, "{} [bx + si {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX_DI(disp)) => {
+                MemoryOperandKind::Disp16_BX_DI(disp) => {
                     write!(f, "{} [bx + di {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP_SI(disp)) => {
+                MemoryOperandKind::Disp16_BP_SI(disp) => {
                     write!(f, "{} [bp + si {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP_DI(disp)) => {
+                MemoryOperandKind::Disp16_BP_DI(disp) => {
                     write!(f, "{} [bp + di {:+}]", mem.size, disp)?
                 }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::SI(disp)) => {
-                    write!(f, "{} [si {:+}]", mem.size, disp)?
-                }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::DI(disp)) => {
-                    write!(f, "{} [di {:+}]", mem.size, disp)?
-                }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BP(disp)) => {
-                    write!(f, "{} [bp {:+}]", mem.size, disp)?
-                }
-                MemoryOperandKind::Displacement16bit(MemoryDisplacement16bit::BX(disp)) => {
-                    write!(f, "{} [bx {:+}]", mem.size, disp)?
-                }
+                MemoryOperandKind::Disp16_SI(disp) => write!(f, "{} [si {:+}]", mem.size, disp)?,
+                MemoryOperandKind::Disp16_DI(disp) => write!(f, "{} [di {:+}]", mem.size, disp)?,
+                MemoryOperandKind::Disp16_BP(disp) => write!(f, "{} [bp {:+}]", mem.size, disp)?,
+                MemoryOperandKind::Disp16_BX(disp) => write!(f, "{} [bx {:+}]", mem.size, disp)?,
             },
             Operand::Immediate(imm) => match imm {
                 Immediate::Bit8(imm) => write!(f, "byte {}", imm)?,
@@ -222,7 +185,7 @@ impl Display for Operand {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Register {
     AL,
     CL,
@@ -243,19 +206,19 @@ pub enum Register {
     DI,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Immediate {
     Bit8(u8),
     Bit16(u16),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MemoryOperand {
     kind: MemoryOperandKind,
     size: MemoryOperandSize,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemoryOperandSize {
     Word,
     Byte,
@@ -280,14 +243,42 @@ impl Display for MemoryOperandSize {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemoryOperandKind {
-    Direct(MemoryDirect),
-    Displacement8bit(MemoryDisplacement8bit),
-    Displacement16bit(MemoryDisplacement16bit),
+    Direct_BX_SI,
+    Direct_BX_DI,
+    Direct_BP_SI,
+    Direct_BP_DI,
+    Direct_SI,
+    Direct_DI,
+    Direct_Address(u16),
+    Direct_BX,
+
+    Disp8_BX_SI(i8),
+    Disp8_BX_DI(i8),
+    Disp8_BP_SI(i8),
+    Disp8_BP_DI(i8),
+    Disp8_SI(i8),
+    Disp8_DI(i8),
+    Disp8_BP(i8),
+    Disp8_BX(i8),
+
+    Disp16_BX_SI(i16),
+    Disp16_BX_DI(i16),
+    Disp16_BP_SI(i16),
+    Disp16_BP_DI(i16),
+    Disp16_SI(i16),
+    Disp16_DI(i16),
+    Disp16_BP(i16),
+    Disp16_BX(i16),
+    // Direct(MemoryDirect),
+    // Displacement8bit(MemoryDisplacement8bit),
+    // Displacement16bit(MemoryDisplacement16bit),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemoryDirect {
     BX_SI,
     BX_DI,
@@ -299,7 +290,8 @@ pub enum MemoryDirect {
     BX,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemoryDisplacement8bit {
     BX_SI(i8),
     BX_DI(i8),
@@ -311,7 +303,8 @@ pub enum MemoryDisplacement8bit {
     BX(i8),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[allow(non_camel_case_types)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MemoryDisplacement16bit {
     BX_SI(i16),
     BX_DI(i16),
